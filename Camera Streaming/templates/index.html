@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Scanner 3000</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Camera Scanner</h1>
+        <h2>Make sure to connect cameras via USB</h2>
+        
+        <div class="controls">
+            <button class="btn" onclick="scanCameras()">Search for Cameras</button>
+        </div>
+
+        <div class="camera-section">
+            <div id="camera-list" class="camera-grid">
+                <!-- Cameras will be here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pass server info from Flask to JavaScript
+        serverIP = '{{ server_ip }}';
+        serverPort = '{{ server_port }}';
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
