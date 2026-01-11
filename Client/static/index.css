@@ -1,0 +1,141 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+} 
+
+body {
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+    background: #f5f5f5;
+} 
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center; 
+    color: #000000;
+    margin-bottom: 5px;
+    margin-top: 35px;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+h2 {
+    text-align: center; 
+    color: #1a1a1a;
+    margin-bottom: 35px;
+    font-size: 1.0rem;
+    font-weight: 700;
+}
+
+.controls {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.btn {
+    background: #ffffff;
+    border: 2px solid #ffffff;
+    color: #1a1a1a;
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+}
+
+.camera-section {
+    background: rgba(195, 20, 20, 0.79);
+    border-radius: 45px;
+    padding: 30px;
+    margin-top: 20px;
+}
+
+.camera-input-box {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.camera-input-box label {
+    display: block;
+    color: #1a1a1a;
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.camera-input-box input {
+    width: calc(100% - 120px);
+    padding: 12px 18px;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    font-size: 15px;
+    background: #f8f8f8;
+    color: #1a1a1a;
+    margin-right: 10px;
+}
+
+.camera-input-box input:focus {
+    outline: none;
+    border-color: #5d73ad;
+    background: #ffffff;
+}
+
+.camera-input-box .btn {
+    padding: 12px 28px;
+}
+
+#status {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#status .success {
+    color: #059669;
+}
+
+#status .error {
+    color: #dc2626;
+}
+
+#status .connecting {
+    color: #5d73ad;
+}
+
+.video-container {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.video-container img {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.info-box {
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 15px;
+    padding: 15px;
+    text-align: center;
+    color: #1a1a1a;
+    font-weight: 600;
+}

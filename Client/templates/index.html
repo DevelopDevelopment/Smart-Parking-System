@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Parking Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Parking System</h1>
+        
+        <div class="camera-section">
+            <div class="camera-input-box">
+                <label>Camera URL:</label>
+                <input type="text" id="cameraUrl" value="{{ stream_url }}">
+                <button class="btn" onclick="updateCamera()">Connect</button>
+            </div>
+            
+            <div class="video-container">
+                <img src="{{ url_for('video_feed') }}" alt="Live Feed">
+            </div>
+        </div>
+        
+        <div class="controls">
+            <a href="/setup" class="link-btn">
+                <button class="btn action-btn">Setup Parking Spots</button>
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        function updateCamera() {
+            const url = document.getElementById('cameraUrl').value;
+            fetch('/set_camera', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({camera_url: url})
+            }).then(res => res.json()).then(data => {
+                if(data.success) location.reload();
+            });
+        }
+    </script>
+</body>
+</html>

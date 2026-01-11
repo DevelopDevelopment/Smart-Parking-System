@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Parking - Find a Spot</title>
+    <link rel="stylesheet" href="\static\style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Parking System</h1>
+        
+        <div class="map-section">
+            <div class="map-grid">
+                <div class="parking-lot" id="lot-1" style="left: 15%; top: 20%;" onclick="showParkingDetails(1)">
+                    <div class="parking-lot-icon">
+                        P
+                        <div class="status-badge" id="badge-1">0</div>
+                    </div>
+                    <div class="parking-lot-label">Tesco</div>
+                </div>
+                
+                <div class="parking-lot inactive" style="left: 50%; top: 30%;">
+                    <div class="parking-lot-icon">
+                        P
+                        <div class="status-badge">0</div>
+                    </div>
+                    <div class="parking-lot-label">Other Parking<br><small>(Coming Soon)</small></div>
+                </div>
+                
+                <div class="parking-lot inactive" style="left: 75%; top: 50%;">
+                    <div class="parking-lot-icon">
+                        P
+                        <div class="status-badge">0</div>
+                    </div>
+                    <div class="parking-lot-label">Airport carpark<br><small>(Coming Soon)</small></div>
+                </div>
+                
+                <div class="parking-lot inactive" style="left: 30%; top: 65%;">
+                    <div class="parking-lot-icon">
+                        P
+                        <div class="status-badge">0</div>
+                    </div>
+                    <div class="parking-lot-label">Other Parking<br><small>(Coming Soon)</small></div>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color available"></div>
+                    <span>Available Spots</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color occupied"></div>
+                    <span>Occupied</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color inactive"></div>
+                    <span>Coming Soon</span>
+                </div>
+            </div>
+            
+            <div class="refresh-info">
+                Updates every 3 seconds
+            </div>
+        </div>
+    </div>
+    
+    <div id="parkingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <h2 id="modalTitle">Downtown Garage</h2>
+                <p id="modalSubtitle">Real-time parking availability</p>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid">
+                    <div class="stat-card total">
+                        <div class="stat-number" id="totalSpots">0</div>
+                        <div class="stat-label">Total Spots</div>
+                    </div>
+                    <div class="stat-card available">
+                        <div class="stat-number" id="availableSpots">0</div>
+                        <div class="stat-label">Available</div>
+                    </div>
+                    <div class="stat-card occupied">
+                        <div class="stat-number" id="occupiedSpots">0</div>
+                        <div class="stat-label">Occupied</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-bottom: 20px; color: #1a1a1a;">Parking Spots Status</h3>
+                <div class="spots-grid" id="spotsGrid">
+                    <div class="loading">Loading spots...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="connection-status connected" id="connectionStatus">
+        Connected to System
+    </div>
+    
+    <script>
+        let updateInterval;
+        
+        function showParkingDetails(lotId) {
+            document.getElementById('parkingModal').style.display = 'block';
+            loadParkingData();
+            
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(loadParkingData, 3000);
+        }
+        
+        function closeModal() {
+            document.getElementById('parkingModal').style.display = 'none';
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('parkingModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+        
+        function loadParkingData() {
+            fetch('/api/parking_status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        updateConnectionStatus(false);
+                        return;
+                    }
+                    
+                    updateConnectionStatus(true);
+                    updateStats(data);
+                    updateSpots(data.spots);
+                    updateMapBadge(data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    updateConnectionStatus(false);
+                });
+        }
+        
+        function updateStats(data) {
+            document.getElementById('totalSpots').textContent = data.total;
+            document.getElementById('availableSpots').textContent = data.available;
+            document.getElementById('occupiedSpots').textContent = data.occupied;
+        }
+        
+        function updateSpots(spots) {
+            const grid = document.getElementById('spotsGrid');
+            
+            if (spots.length === 0) {
+                grid.innerHTML = '<div class="loading">No parking spots configured yet.<br>Please set them up in the admin panel.</div>';
+                return;
+            }
+            
+            grid.innerHTML = '';
+            
+            spots.forEach(spot => {
+                const card = document.createElement('div');
+                card.className = `spot-card ${spot.occupied ? 'occupied' : 'free'}`;
+                card.innerHTML = `
+                    <div class="spot-number">#${spot.id}</div>
+                    <div class="spot-status">${spot.occupied ? 'Occupied' : 'Free'}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        function updateMapBadge(data) {
+            const badge = document.getElementById('badge-1');
+            const lot = document.getElementById('lot-1');
+            
+            badge.textContent = data.available;
+            
+            lot.classList.remove('available', 'full');
+            if (data.available === 0) {
+                lot.classList.add('full');
+            } else {
+                lot.classList.add('available');
+            }
+        }
+        
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.className = 'connection-status connected';
+                status.innerHTML = 'Connected to System';
+            } else {
+                status.className = 'connection-status disconnected';
+                status.innerHTML = 'Connection Lost';
+            }
+        }
+        
+        function showError(message) {
+            const grid = document.getElementById('spotsGrid');
+            grid.innerHTML = `<div class="loading" style="color: #dc2626;">Warning: ${message}</div>`;
+        }
+        
+        function updateMapPeriodically() {
+            fetch('/api/parking_status')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        updateMapBadge(data);
+                        updateConnectionStatus(true);
+                    } else {
+                        updateConnectionStatus(false);
+                    }
+                })
+                .catch(() => updateConnectionStatus(false));
+        }
+        
+        updateMapPeriodically();
+        setInterval(updateMapPeriodically, 3000);
+    </script>
+</body>
+</html>

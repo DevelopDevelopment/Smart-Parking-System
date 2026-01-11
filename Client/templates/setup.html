@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Setup Parking Spots</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='setup.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Setup Parking Spots</h1>
+        <h2>Define parking areas by clicking 4 corners</h2>
+        
+        <div class="camera-section">
+            <div class="setup-info">
+                <p>Instructions: Click 4 corners of each parking spot to define the area</p>
+                <p>Points: <span id="point-count">0</span> / 4 | Spots: <span id="spot-count">0</span></p>
+            </div>
+            
+            <div class="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="addSpot()">Add Spot</button>
+                <button class="btn" onclick="undoPoint()">Undo Point</button>
+                <button class="btn" onclick="clearAll()">Clear All</button>
+                <button class="btn" onclick="finishSetup()">Finish Setup</button>
+            </div>
+            
+            <div id="spot-list"></div>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let currentPoints = [];
+        let allSpots = [];
+        let backgroundImage = null;
+        
+        const img = new Image();
+        img.onload = function() {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            backgroundImage = img;
+            redraw();
+        };
+        img.src = '/get_frame_for_setup?t=' + Date.now();
+        
+        canvas.addEventListener('click', function(e) {
+            if (currentPoints.length >= 4) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            currentPoints.push({x: x, y: y});
+            document.getElementById('point-count').textContent = currentPoints.length;
+            redraw();
+        });
+        
+        function redraw() {
+            if (!backgroundImage) return;
+            ctx.drawImage(backgroundImage, 0, 0);
+            
+            allSpots.forEach((spot, idx) => {
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(spot[0].x, spot[0].y);
+                for (let i = 1; i < spot.length; i++) {
+                    ctx.lineTo(spot[i].x, spot[i].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                const centerX = spot.reduce((sum, p) => sum + p.x, 0) / spot.length;
+                const centerY = spot.reduce((sum, p) => sum + p.y, 0) / spot.length;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 24px Arial';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 3;
+                ctx.strokeText('Spot ' + (idx + 1), centerX - 40, centerY);
+                ctx.fillText('Spot ' + (idx + 1), centerX - 40, centerY);
+            });
+            
+            currentPoints.forEach((point, idx) => {
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 3;
+                ctx.strokeText((idx + 1), point.x + 12, point.y - 12);
+                ctx.fillText((idx + 1), point.x + 12, point.y - 12);
+            });
+            
+            if (currentPoints.length > 1) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(currentPoints[0].x, currentPoints[0].y);
+                for (let i = 1; i < currentPoints.length; i++) {
+                    ctx.lineTo(currentPoints[i].x, currentPoints[i].y);
+                }
+                ctx.stroke();
+            }
+        }
+        
+        function addSpot() {
+            if (currentPoints.length !== 4) {
+                alert('Need exactly 4 points');
+                return;
+            }
+            
+            fetch('/add_parking_spot', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({points: currentPoints})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    allSpots.push([...currentPoints]);
+                    currentPoints = [];
+                    document.getElementById('point-count').textContent = '0';
+                    document.getElementById('spot-count').textContent = allSpots.length;
+                    redraw();
+                    updateSpotList();
+                }
+            });
+        }
+        
+        function undoPoint() {
+            if (currentPoints.length > 0) {
+                currentPoints.pop();
+                document.getElementById('point-count').textContent = currentPoints.length;
+                redraw();
+            }
+        }
+        
+        function clearAll() {
+            if (confirm('Clear all spots?')) {
+                fetch('/clear_parking_spots', {method: 'POST'})
+                .then(() => {
+                    currentPoints = [];
+                    allSpots = [];
+                    document.getElementById('point-count').textContent = '0';
+                    document.getElementById('spot-count').textContent = '0';
+                    redraw();
+                    updateSpotList();
+                });
+            }
+        }
+        
+        function updateSpotList() {
+            const list = document.getElementById('spot-list');
+            if (allSpots.length === 0) {
+                list.innerHTML = '';
+                return;
+            }
+            list.innerHTML = '<h3>Configured Spots</h3>';
+            allSpots.forEach((spot, idx) => {
+                list.innerHTML += '<p>Spot ' + (idx + 1) + ' - Ready</p>';
+            });
+        }
+        
+        function finishSetup() {
+            if (allSpots.length === 0) {
+                alert('Add at least one spot');
+                return;
+            }
+            window.location.href = '/';
+        }
+        
+        setInterval(() => {
+            img.src = '/get_frame_for_setup?t=' + Date.now();
+        }, 2000);
+        
+        updateSpotList();
+    </script>
+</body>
+</html>
