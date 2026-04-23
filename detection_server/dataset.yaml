@@ -1,0 +1,7 @@
+path: G:/Programing/parking intm/Training data/datasets/parking_project
+train: train/images
+val: val/images
+
+nc: 1
+names:
+  - car

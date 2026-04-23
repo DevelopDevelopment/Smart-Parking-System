@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartParking - Setup Parking Spots</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='setup.css') }}">    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="main-header">
+            <div class="logo"><a href="/" class="back-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg></a>
+                <div class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="3" />
+                        <path d="M9 7h4a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H9V7z" />
+                        <path d="M9 11v6" />
+                    </svg></div><span class="logo-text">Setup<span class="logo-accent">Spots</span></span>
+            </div>
+            <div class="header-status">
+                <div class="point-counter"><span id="modeLabel">Points: <strong
+                            id="point-count">0</strong>/4</span><span class="divider">|</span><span>Spots: <strong
+                            id="spot-count">0</strong></span></div>
+            </div>
+        </header>
+        <main class="main-content setup-mode">
+            <div class="setup-container">
+                <div class="edit-mode-banner" id="editBanner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg><span id="editBannerText">Editing Spot — drag the corner handles to reposition them.</span>
+                </div>
+                <div class="setup-instructions" id="addInstructions">
+                    <div class="instruction-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4M12 8h.01" />
+                        </svg></div>
+                    <div class="instruction-text">
+                        <h3>Click 4 corners to define each parking spot</h3>
+                        <p>Click on the video feed to mark the corners of a parking space, then click "Add Spot" to save
+                            it.</p>
+                    </div>
+                </div>
+                <div class="canvas-container"><canvas id="canvas"></canvas>
+                    <div class="canvas-hint" id="canvasHint">Click to place point 1</div>
+                </div>
+                <div class="setup-controls" id="addControls"><button class="btn-setup" onclick="undoPoint()"><svg
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h10a5 5 0 0 1 5 5v2M3 10l6 6M3 10l6-6" />
+                        </svg>
+                        Undo Point
+                    </button><button class="btn-setup primary" onclick="addSpot()" id="btnAddSpot" disabled><svg
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        Add Spot
+                    </button><button class="btn-setup danger" onclick="clearAll()"><svg viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
+                        </svg>
+                        Clear All
+                    </button><button class="btn-setup success" onclick="finishSetup()"><svg viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Finish Setup
+                    </button></div>
+                <div class="setup-controls" id="editControls" style="display:none"><button class="btn-setup"
+                        onclick="cancelEdit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                        Cancel
+                    </button><button class="btn-setup primary" onclick="saveEdit()"><svg viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Save Changes
+                    </button></div>
+                <div class="spots-list" id="spotsList">
+                    <h3>Configured Spots</h3>
+                    <div class="spots-empty" id="spotsEmpty">No spots configured yet</div>
+                    <div class="spots-items" id="spotsItems"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>window.SETUP_CAM_ID = "{{ cam_id }}";</script>
+    <script src="{{ url_for('static', filename='setup.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkingMeter - Cameras Streaming Server</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='cameras.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="main-header">
+            <div class="logo">
+                <a href="/" class="back-link">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m12 19-7-7 7-7"/>
+                        <path d="M19 12H5"/>
+                    </svg>
+                </a>
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                        <circle cx="12" cy="13" r="3"/>
+                    </svg>
+                </div>
+                <span class="logo-text">ParkingMeter<span class="logo-accent">Cameras</span></span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="dashboard">
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Camera Sources</h2>
+                        <span class="badge">{{ cameras|length }} Camera{{ 's' if cameras|length != 1 else '' }}</span>
+                        <button class="btn-add-camera" onclick="addCamera()" title="Add a new camera">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle;">
+                                <path d="M5 12h14"/>
+                                <path d="M12 5v14"/>
+                            </svg>
+                            Add Camera
+                        </button>
+                    </div>
+                    {% if cameras %}
+                    <div class="camera-list" id="cameraList">
+                        {% for cam in cameras %}
+                        {% set s = cam.get('settings', {}) %}
+                        {% set is_active = cam.id in active_cameras %}
+                        <div class="cam-wrapper {% if is_active %}is-active{% endif %}" id="wrapper-{{ cam.id }}">
+                            <div class="camera-item" id="item-{{ cam.id }}">
+                                <div class="cam-preview-box" id="previewBox-{{ cam.id }}">
+                                    <div class="preview-loader" id="loader-{{ cam.id }}">
+                                        <div class="spinner"></div><span>Loading…</span>
+                                    </div>
+                                    <img id="preview-{{ cam.id }}" {% if is_active %}src="/video_feed/{{ cam.id }}" {% else %}src="" {% endif %} alt="Preview" {% if not is_active %}style="display:none;" {% endif %} onload="this.style.display='block'; document.getElementById('loader-{{ cam.id }}').style.display='none'">
+                                    <div class="preview-live-badge" id="liveBadge-{{ cam.id }}" {% if not is_active %}style="display:none;" {% endif %}>
+                                        <span class="preview-live-dot"></span>LIVE
+                                    </div>
+                                    {% if not is_active %}
+                                    <div class="preview-refresh-overlay" onclick="refreshThumb('{{ cam.id }}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                            <path d="M3 3v5h5"/>
+                                        </svg>
+                                    </div>
+                                    {% endif %}
+                                    <button class="preview-focus-btn" onclick="openFocus('{{ cam.id }}')" title="Focus view">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
+                                            <path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+                                            <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
+                                            <path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="camera-details">
+                                    <h3>{{ cam.name }}</h3>
+                                    <div class="camera-source" title="{{ cam.source }}">{{ cam.source }}</div>
+                                    <div class="cam-occupancy" id="occupancy-{{ cam.id }}">
+                                        {% if is_active %}
+                                        <span class="occ-stat total"><span class="occ-dot"></span><strong id="stat-total-{{ cam.id }}">{{ cam.parking_spots|length }}</strong> total</span>
+                                        <span class="occ-stat available"><span class="occ-dot"></span><strong id="stat-avail-{{ cam.id }}">—</strong> free</span>
+                                        <span class="occ-stat occupied"><span class="occ-dot"></span><strong id="stat-occ-{{ cam.id }}">—</strong> taken</span>
+                                        {% else %}
+                                        <span class="occ-stat total inactive"><span class="occ-dot"></span><strong>{{ cam.parking_spots|length }}</strong> spot{{ 's' if cam.parking_spots|length != 1 else '' }} configured</span>
+                                        <span class="occ-stat inactive" style="color:var(--gray);border-color:var(--gray-dark);">Enable to track live</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="camera-actions">
+                                    <button class="btn-toggle {% if is_active %}on{% else %}off{% endif %}" id="toggleBtn-{{ cam.id }}" onclick="toggleCamera('{{ cam.id }}')">
+                                        {% if is_active %}
+                                        <span class="toggle-on-text">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <path d="m9 12 2 2 4-4"/>
+                                            </svg>
+                                            Running
+                                        </span>
+                                        <span class="toggle-off-text">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <path d="m15 9-6 6"/>
+                                                <path d="m9 9 6 6"/>
+                                            </svg>
+                                            Stop
+                                        </span>
+                                        {% else %}
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="6 3 20 12 6 21 6 3"/>
+                                        </svg>
+                                        Start
+                                        {% endif %}
+                                    </button>
+                                    <a href="/setup?cam={{ cam.id }}" class="btn-icon" title="Setup parking spots">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect width="10" height="10" x="2" y="2" rx="2"/>
+                                            <rect width="10" height="10" x="12" y="2" rx="2"/>
+                                            <rect width="10" height="10" x="2" y="12" rx="2"/>
+                                            <rect width="10" height="10" x="12" y="12" rx="2"/>
+                                        </svg>
+                                    </a>
+                                    <button class="btn-settings" id="settingsBtn-{{ cam.id }}" onclick="toggleSettings('{{ cam.id }}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        Settings
+                                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m6 9 6 6 6-6"/>
+                                        </svg>
+                                    </button>
+                                    <button class="btn-delete" id="deleteBtn-{{ cam.id }}" onclick="deleteCamera('{{ cam.id }}')" title="Delete this camera">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 6h18"/>
+                                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                            <line x1="10" x2="10" y1="11" y2="17"/>
+                                            <line x1="14" x2="14" y1="11" y2="17"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="api-strip">
+                                <div class="api-strip-label">API URL</div>
+                                <div class="api-strip-url" id="apiUrl-{{ cam.id }}">loading…</div>
+                                <button class="api-copy-btn" id="apiCopyBtn-{{ cam.id }}" onclick="copyApiUrl('{{ cam.id }}')" title="Copy API URL">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                                    </svg>
+                                    Copy
+                                </button>
+                            </div>
+                            <div class="settings-panel" id="settings-{{ cam.id }}">
+                                <div class="settings-inner">
+                                    <div class="setting-block full-width">
+                                        <div class="setting-label"><span>Detection Model</span></div>
+                                        <select class="setting-select" id="model-{{ cam.id }}">
+                                            <option value="yolo26n.pt" {% if s.get('model','yolo26s.pt')=='yolo26n.pt' %}selected{% endif %}>Fast / Lightweight — yolo26n (~6 MB)</option>
+                                            <option value="yolo26s.pt" {% if s.get('model','yolo26s.pt')=='yolo26s.pt' %}selected{% endif %}>Recommended — yolo26s (~22 MB)</option>
+                                            <option value="yolo26x.pt" {% if s.get('model','yolo26s.pt')=='yolo26x.pt' %}selected{% endif %}>Best Accuracy — yolo26x (~131 MB)</option>
+                                        </select>
+                                        <span class="setting-hint">Changing model will restart the camera</span>
+                                    </div>
+                                    <div class="setting-block">
+                                        <div class="setting-label"><span>FPS Limit</span></div>
+                                        <select class="setting-select" id="fps-{{ cam.id }}">
+                                            <option value="0" {% if s.get('fps_limit',0)==0 %}selected{% endif %}>Unlimited</option>
+                                            <option value="5" {% if s.get('fps_limit',0)==5 %}selected{% endif %}>5 FPS</option>
+                                            <option value="10" {% if s.get('fps_limit',0)==10 %}selected{% endif %}>10 FPS</option>
+                                            <option value="15" {% if s.get('fps_limit',0)==15 %}selected{% endif %}>15 FPS</option>
+                                            <option value="24" {% if s.get('fps_limit',0)==24 %}selected{% endif %}>24 FPS</option>
+                                            <option value="30" {% if s.get('fps_limit',0)==30 %}selected{% endif %}>30 FPS</option>
+                                        </select>
+                                    </div>
+                                    <div class="setting-block">
+                                        <div class="setting-label">
+                                            <span>Detection Interval</span>
+                                            <span class="val" id="intervalVal-{{ cam.id }}">Every {{ s.get('detection_interval',3) }} second{{ 's' if s.get('detection_interval',3)!=1 else '' }}</span>
+                                        </div>
+                                        <input type="range" min="1" max="30" step="1" value="{{ s.get('detection_interval',3) }}" id="interval-{{ cam.id }}" oninput="onInterval('{{ cam.id }}', this.value)">
+                                    </div>
+                                    <div class="setting-block full-width">
+                                        <div class="setting-label">
+                                            <span>AI Confidence Threshold</span>
+                                            <span class="val" id="confVal-{{ cam.id }}">{{ (s.get('confidence_threshold',0.25)*100)|int }}%</span>
+                                        </div>
+                                        <input type="range" min="0.05" max="0.95" step="0.05" value="{{ s.get('confidence_threshold',0.25) }}" id="conf-{{ cam.id }}" oninput="onConf('{{ cam.id }}', this.value)">
+                                    </div>
+                                    <div class="setting-block">
+                                        <div class="toggle-row">
+                                            <span>Show Bounding Boxes</span>
+                                            <label class="toggle"><input type="checkbox" id="boxes-{{ cam.id }}" {% if s.get('show_boxes',True) %}checked{% endif %}><span class="toggle-track"></span></label>
+                                        </div>
+                                    </div>
+                                    <div class="setting-block">
+                                        <div class="toggle-row">
+                                            <span>Show Parking Spots</span>
+                                            <label class="toggle"><input type="checkbox" id="parking-spots-{{ cam.id }}" {% if s.get('show_parking_spots',True) %}checked{% endif %}><span class="toggle-track"></span></label>
+                                        </div>
+                                    </div>
+                                    <div class="setting-block">
+                                        <div style="height:24px;"></div>
+                                        <button class="btn-save-settings" id="saveBtn-{{ cam.id }}" onclick="saveSettings('{{ cam.id }}')">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+                                                <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/>
+                                                <path d="M7 3v4a1 1 0 0 0 1 1h7"/>
+                                            </svg>
+                                            Save Settings
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 2l20 20"/>
+                            <path d="M7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16"/>
+                            <path d="M9.5 4h5L17 7h3a2 2 0 0 1 2 2v7.5"/>
+                            <path d="M14.121 15.121A3 3 0 1 1 9.88 10.88"/>
+                        </svg>
+                        <h3>No cameras configured</h3>
+                        <p>Add a camera to get started</p>
+                        <button class="btn-add-camera" onclick="addCamera()">+ Add Camera</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- focus modal -->
+    <div class="focus-modal" id="focusModal" onclick="closeFocusOnBackdrop(event)">
+        <div class="focus-modal-inner">
+            <div class="focus-modal-header">
+                <span class="focus-modal-title" id="focusTitle">Camera</span>
+                <div class="focus-modal-meta">
+                    <div class="focus-modal-stats" id="focusStats" style="display:none;">
+                        <span class="focus-stat total"><strong id="focusTotal">—</strong> total</span>
+                        <span class="focus-stat avail"><strong id="focusAvail">—</strong> free</span>
+                        <span class="focus-stat occ"><strong id="focusOcc">—</strong> taken</span>
+                        <span class="focus-stat"><strong id="focusFps">—</strong> fps</span>
+                    </div>
+                    <button id="focusOverlayBtn" class="btn-toggle-overlay" style="display:none;">Show overlays</button>
+                    <button class="btn-close" onclick="closeFocus()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18"/>
+                            <path d="m6 6 12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="focus-modal-body" id="focusBody"></div>
+            <div class="focus-modal-footer">
+                <span id="focusSource" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%;"></span>
+                <span id="focusStatusText" style="color:var(--available);font-family:'Open Sans',sans-serif;font-size:0.8rem;font-weight:600;"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- add camera modal -->
+    <div class="ac-backdrop" id="acModal" onclick="acBackdropClose(event)">
+        <div class="ac-modal">
+            <div class="ac-header">
+                <span class="ac-title">Add Camera</span>
+                <button class="ac-close" onclick="closeAddCamera()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="ac-tabs">
+                <button class="ac-tab active" id="tabUrl" onclick="acSwitchTab('url')">Stream URL</button>
+                <button class="ac-tab" id="tabDevice" onclick="acSwitchTab('device')">Local Device</button>
+            </div>
+            <div class="ac-body">
+                <div class="ac-panel" id="panelUrl">
+                    <div class="ac-field">
+                        <label class="ac-label">Camera Name</label>
+                        <input class="ac-input" id="urlName" type="text" placeholder="e.g. Car Park Level 1" oninput="acSyncId('urlName')">
+                    </div>
+                    <div class="ac-field">
+                        <label class="ac-label">Stream URL</label>
+                        <input class="ac-input" id="urlSource" type="text" placeholder="https://... or rtsp://...">
+                        <span class="ac-hint">HTTP/HTTPS streams, MJPEG, or RTSP</span>
+                    </div>
+                    <div class="ac-field">
+                        <label class="ac-label">Camera ID</label>
+                        <input class="ac-input ac-input-id" id="urlCamId" type="text" placeholder="auto-generated from name">
+                        <span class="ac-hint">Unique identifier, lowercase, no spaces</span>
+                    </div>
+                </div>
+                <div class="ac-panel" id="panelDevice" style="display:none;">
+                    <div class="ac-field">
+                        <label class="ac-label">Camera Name</label>
+                        <input class="ac-input" id="devName" type="text" placeholder="e.g. Entrance Camera" oninput="acSyncId('devName')">
+                    </div>
+                    <div class="ac-field">
+                        <label class="ac-label">Device</label>
+                        <div class="ac-select-wrap">
+                            <select class="ac-select" id="devSelect">
+                                <option value="">Loading devices...</option>
+                            </select>
+                            <button class="ac-refresh-btn" onclick="acLoadDevices()" title="Refresh device list">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                    <path d="M3 3v5h5"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <span class="ac-hint" id="devHint">Scanning for connected cameras...</span>
+                    </div>
+                    <div class="ac-field">
+                        <label class="ac-label">Camera ID</label>
+                        <input class="ac-input ac-input-id" id="devCamId" type="text" placeholder="auto-generated from name">
+                        <span class="ac-hint">Unique identifier, lowercase, no spaces</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ac-error" id="acError" style="display:none;"></div>
+            <div class="ac-footer">
+                <button class="ac-btn-cancel" onclick="closeAddCamera()">Cancel</button>
+                <button class="ac-btn-submit" id="acSubmit" onclick="acSubmit()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;">
+                        <path d="M5 12h14"/><path d="M12 5v14"/>
+                    </svg>
+                    Add Camera
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script>
+        window.CAMERAS_DATA = {{ cameras | tojson }};
+        window.ACTIVE_CAM_IDS = {{ active_cameras | tojson }};
+        window.API_KEYS = {{ api_keys | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='cameras.js') }}"></script>
+</body>
+
+</html>
