@@ -26,7 +26,7 @@ The system uses edge-based computer vision to monitor carpark occupancy in real 
 
 ### Detection Server
 
-After downloading and extracting **Detection_Server.7z**, install the latest version of Python from [python.org/downloads](https://www.python.org/downloads/), then open terminal in the extracted folder and run:
+Download **Detection_Server.7z** from the [releases](https://github.com/DevelopDevelopment/Smart-Parking-System/releases/tag/DetectionServer) and extract it, install the latest version of Python from [python.org/downloads](https://www.python.org/downloads/), then open terminal in the extracted folder and run this:
 
 ```
 pip install flask flask-cors opencv-python ultralytics python-dotenv supabase torch numpy
