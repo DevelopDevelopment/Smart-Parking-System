@@ -1,4 +1,4 @@
-<<<<<<< Updated upstream
+
 # ParkingMeter.co.uk
 
 A **smart parking** system with real-time availability tracking, built as a final year Computer Science project at the University of Hull (2025/26).
